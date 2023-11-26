@@ -1,4 +1,4 @@
-# rf_azure_sync
+# Robot Framework Azure Sync
 
 ## Overview
 
@@ -65,6 +65,7 @@ Example **'sync_config.json'**:
 }
 ```
 ## License
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+This project is licensed under the MIT License - see the [![License](https://img.shields.io/badge/License-MIT-blue.svg)](https://github.com/fabiorisantosquispe/rf_azure_sync/blob/main/LICENSE) file for details.
 ## Contributing
-If you would like to contribute to this project, please follow the [Contribution Guidelines](CONTRIBUTING.md).
+If you would like to contribute to this project, please follow the [![Contributing](https://img.shields.io/badge/Contributing-Read%20Guidelines-green)](https://github.com/fabiorisantosquispe/rf_azure_sync/blob/main/CONTRIBUTING.md)
+.

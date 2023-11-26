@@ -17,7 +17,7 @@ setup(
     description='Synchronization functionalities for Azure-related tasks.',
     long_description=open('README.md', encoding='utf-8').read(),
     long_description_content_type='text/markdown',
-    url='https://github.com/fabiorisantosquispe/seu-projeto',
+    url='https://github.com/fabiorisantosquispe/rf_azure_sync',
     license='MIT',
     classifiers=[
         'Development Status :: 3 - Alpha',
