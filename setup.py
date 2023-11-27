@@ -2,14 +2,14 @@ from setuptools import setup, find_packages
 
 setup(
     name='rf_azure_sync',
-    version='0.1.0',
+    version='0.1.2',
     packages=find_packages(),
     install_requires=[
-        "requests"
+        'requests',
     ],
     entry_points={
         'console_scripts': [
-            'rf_azure_sync=rf_azure_sync:main',
+            'rf_azure_sync=rf_azure_sync.rf_azure_sync:rf_azure_sync',
         ],
     },
     author='Fábio Ribeiro dos Santos Quispe',

@@ -1,4 +1,4 @@
-# Robot Framework Azure Sync
+# Robot Framework Azure Sync 
 
 ## Overview
 
@@ -9,7 +9,7 @@ This Python package provides synchronization capabilities for Azure-related task
 To install `rf_azure_sync`, you can use `pip`. Open a terminal and run:
 
 ```bash
-pip instalar rf_azure_sync
+pip install -i https://test.pypi.org/simple/ rf-azure-sync==0.1.2
 ```
 # Usage
 ## Synchronization
@@ -46,7 +46,7 @@ Example **'sync_config.json'**:
      },
      "tag_config": {
        "test_case": "TC",
-       "user_story": "USA",
+       "user_story": "US",
        "bug": "Bug",
        "title": "Title",
        "TestedBy-Reverse": "",

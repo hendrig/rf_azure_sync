@@ -8,18 +8,19 @@ import sys
 import subprocess
 import json
 import os
-
+from .rf_azure_sync_patch import rf_azure_sync_patch
+from .rf_azure_sync_get import rf_azure_sync_get
 def run_sync_get():
     """
     Run the synchronization process for getting data from Azure.
     """
-    subprocess.run(["python", "rf_azure_sync_get.py"], check=True)
+    rf_azure_sync_get()
 
 def run_sync_patch():
     """
     Run the synchronization process for patching data to Azure.
     """
-    subprocess.run(["python", "rf_azure_sync_patch.py"], check=True)
+    rf_azure_sync_patch()
 
 def run_robot_tests(tests_folder):
     """
@@ -90,9 +91,9 @@ def create_sync_config():
 
     print("sync_config.json created successfully.")
 
-def main():
+def rf_azure_sync():
     """
-    Main entry point of the synchronization script.
+    rf_azure_sync entry point of the synchronization script.
 
     If no command-line arguments are provided, it runs both sync_get and sync_patch.
     If 'get' is provided as an argument, only sync_get is executed.
@@ -108,7 +109,7 @@ def main():
 
     if len(sys.argv) == 1:
         run_sync_get()
-        run_sync_patch()
+        rf_azure_sync_patch()
 
         config_path = 'sync_config.json'
         if os.path.exists(config_path):
@@ -132,4 +133,4 @@ def main():
         print("Usage: python rf_azure_sync.py [get | patch]")
 
 if __name__ == "__main__":
-    main()
+    rf_azure_sync()

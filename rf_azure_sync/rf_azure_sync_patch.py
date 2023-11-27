@@ -432,6 +432,7 @@ def update_azure_test_case(
     Returns:
         None
     """
+    tags = parse_tags(cases_dict["Tags"])
     for test_step in transformed_steps:
         test_step.validate()
 
@@ -501,23 +502,32 @@ def update_azure_test_case(
     except requests.RequestException as e:
         print(f"Erro na atualização dos Tests Cases na Azure: {e}")
 
+def rf_azure_sync_patch():
+    """
+     This function performs synchronization between the Robot Framework and Azure DevOps.
+     It reads Robot Framework files, extracts test cases and tags, and updates
+     the corresponding test cases in Azure DevOps.
+     """
+    config_data = load_sync_config()
+    path_robot_files = find_robot_files(config_data["path"])
+    for robot_file in path_robot_files:
+        if "todo_organize.robot" not in robot_file:
+            content = read_robot_file(robot_file)
+            test_cases_data, test_tags = extract_test_tags_and_test_cases(content)
+            cases = parse_test_cases(test_cases_data, config_data)
+            for case in cases:
+                print("\n" + "=" * 70)
+                # test_case_identifier = (
+                #     re.search(r"TestCase\s*(\d+)", case["Tags"]).group(1)
+                #     if "TestCase" in case["Tags"]
+                #     else "N/A"
+                # )
+                tags = parse_tags(case["Tags"])
+                user_story_ids = tags.get("UserStory", [])
+                bug_ids = tags.get("Bug", [])
+                linked_item_id = user_story_ids + bug_ids
+                steps = transform_steps(case["Steps"])
+                update_azure_test_case(case, test_tags, steps, config_data, linked_item_id)
 
-config_data = load_sync_config()
-path_robot_files = find_robot_files(config_data["path"])
-for robot_file in path_robot_files:
-    content = read_robot_file(robot_file)
-    test_cases_data, test_tags = extract_test_tags_and_test_cases(content)
-    cases = parse_test_cases(test_cases_data, config_data)
-    for case in cases:
-        print("\n" + "=" * 70)
-        test_case_identifier = (
-            re.search(r"TestCase\s*(\d+)", case["Tags"]).group(1)
-            if "TestCase" in case["Tags"]
-            else "N/A"
-        )
-        tags = parse_tags(case["Tags"])
-        user_story_ids = tags.get("UserStory", [])
-        bug_ids = tags.get("Bug", [])
-        linked_item_id = user_story_ids + bug_ids
-        steps = transform_steps(case["Steps"])
-        update_azure_test_case(case, test_tags, steps, config_data, linked_item_id)
+if __name__ == "__main__":
+    rf_azure_sync_patch()
