@@ -131,12 +131,12 @@ def create_robot_content(fields, pref_config):
     return rf_content
 
 
-def get_test_case(test_case_id, test_case_link):
+def get_test_case(test_case_id):
     url_workitems = (
-        f"{url}workitems?ids={test_case_id}&$expand=all&api-version=7.1-preview.3"
+        f"{url}wit/workitems?ids={test_case_id}&$expand=all&api-version=7.1-preview.3"
     )
     response_json_list = []
-    response_workitems = requests.get(test_case_link, headers=headers, timeout=10)
+    response_workitems = requests.get(url_workitems, headers=headers, timeout=10)
     if response_workitems.status_code == 200:
         data_workitems = response_workitems.json()
         work_item = data_workitems["value"][0]["fields"]
@@ -176,7 +176,7 @@ def get_test_case(test_case_id, test_case_link):
 
 def get_azure_test_cases():
     """
-    Retrieve Azure test cases based on the given Wiql query.
+    Retrieve Azure test cases based on the given a Test Suite.
 
     Args:
         base_url (str): The base URL for Azure DevOps REST API.
@@ -217,7 +217,7 @@ def get_azure_test_cases():
                     for test_case in test_cases["value"]:
                         print("WI: ", test_case["workItem"]["id"])
                         print("TestCase: ", test_case["workItem"]["name"])
-                        get_test_case(test_case["workItem"]["id"], test_case["links"]["_self"]["href"])
+                        get_test_case(test_case["workItem"]["id"])
             print("\n")
         #print(data)
 
