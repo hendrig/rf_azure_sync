@@ -54,6 +54,36 @@ def extract_test_tags_and_test_cases(rf_content):
     raw_test_cases_data = test_cases_match.group(1).strip() if test_cases_match else ""
     return raw_test_cases_data, case_tags
 
+def extract_test_tags_and_test_cases_for_features(rf_content):
+    """
+    Extract test tags and test cases from Robot Framework content.
+
+    Args:
+        rf_content (str): Robot Framework content.
+
+    Returns:
+        Tuple[str, str]: A tuple containing raw test cases data and case tags.
+    """
+    settings_match = re.search(
+        r"\*\*\*\s*@\s*\*\*\*(.*?)\*\*\*", rf_content, re.DOTALL
+    )
+    settings_data = settings_match.group(1).strip() if settings_match else ""
+    settings_lines = settings_data.split("\n")
+    settings_dict = {}
+    for line in settings_lines:
+        parts = line.split()
+        if len(parts) >= 2:
+            key = parts[0]
+            value = " ".join(parts[1:])
+            settings_dict[key] = value
+    test_tags_match = re.search(r"@\s+(.+)", settings_data, re.IGNORECASE)
+    case_tags = test_tags_match.group(1).strip() if test_tags_match else None
+    case_tags = "; ".join(case_tags.split()) if case_tags else None
+    test_cases_match = re.search(
+        r"\*\*\*\s*Test Cases\s*\*\*\*(.*?)(?=\*\*\*|$)", rf_content, re.DOTALL
+    )
+    raw_test_cases_data = test_cases_match.group(1).strip() if test_cases_match else ""
+    return raw_test_cases_data, case_tags
 
 def parse_test_cases(raw_test_cases_data, config_settings):
     """
@@ -119,10 +149,11 @@ def get_azure_test_cases(base_url, headers_wiql):
     """
     url_wiql = f"{base_url}wiql?api-version=7.1-preview.2"
 
+##{config_settings["constants"]["System.AreaPath"]}
     query = {
         "query": "SELECT [System.Id] "
         "FROM WorkItems "
-        "WHERE [System.AreaPath] = 'LOG.co\\Transportation\\Motora\\Os Chapa' "
+        "WHERE [System.AreaPath] = 'LOG.co\\Transportation\\Core Transportes\\Squad Bino' "
         "AND [System.WorkItemType] = 'Test Case' "
     }
 
@@ -139,6 +170,21 @@ def get_azure_test_cases(base_url, headers_wiql):
 
 
 def read_robot_file(rf_folder_path, file_path):
+    """
+    Read the contents of a Robot Framework file.
+
+    Args:
+        file_path (str): The path to the Robot Framework file.
+
+    Returns:
+        str: The contents of the Robot Framework file.
+    """
+
+    file_path = f"{rf_folder_path}/{file_path}"
+    with open(file_path, "r", encoding="utf-8") as rf_file:
+        return rf_file.read()
+    
+def read_feature_file(rf_folder_path, file_path):
     """
     Read the contents of a Robot Framework file.
 
@@ -261,10 +307,22 @@ def get_robot_test_case_ids(rf_folder_path, pref_test_case, config):
     """
     rf_test_case_ids = set()
 
+    print("Starting to sync files.")
+    print(f"Paths: {rf_folder_path}")
+
     for _, _, files in os.walk(rf_folder_path):
         for rf_file in files:
             if rf_file.endswith(".robot"):
                 content = read_robot_file(rf_folder_path, rf_file)
+                test_cases_data, _ = extract_test_tags_and_test_cases(content)
+                cases = parse_test_cases(test_cases_data, config)
+                rf_test_case_ids.update(
+                    int(re.search(rf"{pref_test_case}\s*(\d+)", case["Tags"]).group(1))
+                    for case in cases
+                    if re.search(rf"{pref_test_case}\s*(\d+)", case["Tags"])
+                )
+            if rf_file.endswith(".feature"):
+                content = read_feature_file(rf_folder_path, rf_file)
                 test_cases_data, _ = extract_test_tags_and_test_cases(content)
                 cases = parse_test_cases(test_cases_data, config)
                 rf_test_case_ids.update(
@@ -284,6 +342,9 @@ def rf_azure_sync_get():
 
     Note: Make sure to replace the placeholder comments with actual implementations.
     """
+    print(f"Starting to sync {url}")
+    print(f"Headers {headers}")
+
     azure_test_cases = get_azure_test_cases(url, headers)
 
     robot_test_case_ids = get_robot_test_case_ids(

@@ -1,0 +1,26 @@
+{
+  "path": "tests",
+  "credentials": {
+    "personal_access_token": "",
+    "organization_name": "",
+    "project_name": ""
+  },
+  "tag_config": {
+    "test_case": "TC",
+    "user_story": "US",
+    "bug": "Bug",
+    "title": "Title",
+    "TestedBy-Reverse": "",
+    "IterationPath": "",
+    "AutomationStatus": "",
+    "ignore_sync": "",
+    "System.Tags": "",
+    "Priority": ""
+  },
+  "constants": {
+    "TestPlanId": "",
+    "System.TeamProject": "",
+    "settings_section": "*** Settings ***\n\n",
+    "test_cases_section": "*** Test Cases ***\n\n"
+  }
+}

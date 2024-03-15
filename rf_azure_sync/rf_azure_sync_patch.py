@@ -113,6 +113,23 @@ def find_robot_files(folder_path):
                 robot_files.append(os.path.normpath(os.path.join(root, file)))
     return robot_files
 
+def find_gherkin_files(folder_path):
+    """
+    Finds Gherkin Feature files in the specified folder and its subfolders.
+
+    Args:
+        folder_path (str): The path to the folder to search.
+
+    Returns:
+        list: A list of paths to Gherkin Feature files.
+    """
+    gherkin_files = []
+    for root, _, files in os.walk(folder_path):
+        for file in files:
+            if file.endswith(".feature"):
+                gherkin_files.append(os.path.normpath(os.path.join(root, file)))
+    return gherkin_files
+
 
 def read_robot_file(file_path):
     """
@@ -123,6 +140,19 @@ def read_robot_file(file_path):
 
     Returns:
         str: The content of the Robot Framework file.
+    """
+    with open(file_path, "r", encoding="utf-8") as rf_file:
+        return rf_file.read()
+
+def read_gherkin_file(file_path):
+    """
+    Reads the content of a Gherkin Feature file.
+
+    Args:
+        file_path (str): The path to the Gherkin Feature file.
+
+    Returns:
+        str: The content of the Gherkin Feature file.
     """
     with open(file_path, "r", encoding="utf-8") as rf_file:
         return rf_file.read()
