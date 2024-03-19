@@ -57,4 +57,4 @@ Bibliotecas utilizadas:
 Execute os seguintes comandos:
 
 - `docker build -t my-robot .`
-- `docker run -it --rm -v $(pwd)/tests/:/my_project my-robot bash -c 'robot -d ./reports -x outputxunit.xml tests/first.robot'`
+- `docker run -it --rm -v $(pwd)/test_folder/:/my_project my-robot bash -c 'robot -d ./reports -x outputxunit.xml tests/first.robot'`
