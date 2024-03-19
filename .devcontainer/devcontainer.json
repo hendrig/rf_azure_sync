@@ -1,0 +1,29 @@
+{
+  "name": "Python 3.11",
+  "dockerFile": "Dockerfile",
+  "customizations": {
+    "vscode": {
+      "extensions": ["ms-python.python", "esbenp.prettier-vscode"],
+      "settings": {
+        "python.pythonPath": "/usr/local/bin/python3.11",
+        "workbench.sideBar.location": "right",
+        "window.menuBarVisibility": "compact",
+        "git.autofetch": true,
+        "editor.defaultFormatter": "esbenp.prettier-vscode",
+        "editor.formatOnSave": true,
+        "editor.renderWhitespace": "all",
+        "editor.minimap.enabled": false,
+        "workbench.iconTheme": "material-icon-theme",
+        "vscode-pets.throwBallWithMouse": true,
+        "terminal.integrated.env.windows": {},
+        "workbench.colorTheme": "Vim Dark Hard",
+        "terminal.integrated.defaultProfile.windows": "Git Bash",
+        "[yaml]": {
+          "editor.insertSpaces": true,
+          "editor.tabSize": 2,
+          "diffEditor.ignoreTrimWhitespace": false
+        }
+      }
+    }
+  }
+}
