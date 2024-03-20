@@ -1,9 +1,24 @@
+import base64
 import re
 from gherkin3.parser import Parser
+import requests
 import yaml
 import argparse
 
 def convert_and_send(gherkin_filename):
+    organization = ''
+    project = ''
+    token = ''
+    suite_id = ''
+
+    credentials = base64.b64encode(f"Basic:{token}".encode('utf-8')).decode('utf-8')
+
+    headers = {
+        'Authorization': f'Basic {credentials}',
+        'Content-Type': 'application/json-patch+json'
+    }
+
+
     with open("/workspaces/rf_azure_sync/ado_sync/test.feature", 'r') as f:
         content = f.read()
     parser = Parser()
@@ -23,6 +38,56 @@ def convert_and_send(gherkin_filename):
         print(convertedSteps)
         print(convertedExamples)
         print(convertedParams)
+
+        json_list = []
+        json_steps = {
+            "op": "replace",
+            "path": "/fields/Microsoft.VSTS.TCM.Steps",
+            "value": convertedSteps
+        }
+        json_list.append(json_steps)
+
+        if convertedExamples is not None and convertedExamples != "":
+            json_examples = {
+                "op": "replace",
+                "path": "/fields/Microsoft.VSTS.TCM.LocalDataSource",
+                "value": convertedExamples
+            }
+            json_list.append(json_examples)
+
+        if convertedParams is not None and convertedParams != "":
+            json_params = {
+                "op": "replace",
+                "path": "/fields/Microsoft.VSTS.TCM.Parameters",
+                "value": convertedParams
+            }
+            json_list.append(json_params)
+
+
+        for wi in get_test_case_by_tags(test["tags"]):
+            url = f"https://dev.azure.com/{organization}/_apis/wit/workItems/{wi}?api-version=7.1-preview.3"
+            response = requests.patch(url, headers=headers, json=json_list)
+
+            # Check if the request was successful
+            if response.status_code == 200:
+                print("Test case created successfully.")
+            else:
+                print("Failed to create test case. Error:", response.text)
+
+#test["tags"]
+def get_test_case_by_tags(tags):
+    extracted_values = []
+
+    # Iterate over the values of the dictionary
+    for value in tags:
+        x = value["name"]
+        # Check if the value starts with "@tc:"
+        if x.startswith('@tc:'):
+            # Extract the value after "@tc:"
+            extracted_value = x.split('@tc:')[1]
+            extracted_values.append(extracted_value)
+    
+    return extracted_values
 
 def convert_gherkin_parameters(gherkin_testcase):
     parameters = []
@@ -81,7 +146,7 @@ def convert_step_to_xml(steps):
     for idx, step in enumerate(steps, start=2):
         stepText = re.sub(pattern, r'@\1', step["text"])
         xml_step = f'<step id="{idx}" type="ActionStep">\n'
-        xml_step += f'    <parameterizedString isformatted="true">&lt;DIV&gt;&lt;P&gt; {step["type"]} {step["keyword"]} {stepText}&lt;/P&gt;&lt;/DIV&gt;</parameterizedString>\n'
+        xml_step += f'    <parameterizedString isformatted="true">&lt;DIV&gt;&lt;P&gt;{step["keyword"]} {stepText}&lt;/P&gt;&lt;/DIV&gt;</parameterizedString>\n'
         xml_step += '    <parameterizedString isformatted="true">&lt;DIV&gt;&lt;P&gt;&lt;BR/&gt;&lt;/P&gt;&lt;/DIV&gt;</parameterizedString>\n'
         xml_step += '    <description/>\n'
         xml_step += '</step>'
