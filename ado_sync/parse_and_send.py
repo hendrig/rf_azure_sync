@@ -2,10 +2,8 @@ import base64
 import re
 from gherkin3.parser import Parser
 import requests
-import yaml
-import argparse
 
-def convert_and_send(gherkin_filename):
+def convert_and_send(filepath):
     organization = ''
     project = ''
     token = ''
@@ -18,13 +16,11 @@ def convert_and_send(gherkin_filename):
         'Content-Type': 'application/json-patch+json'
     }
 
-
-    with open("/workspaces/rf_azure_sync/ado_sync/test.feature", 'r') as f:
+    with open(filepath, 'r') as f:
         content = f.read()
     parser = Parser()
     feature = parser.parse(content)
 
-    # print(yaml.dump(feature))
     for test in feature["scenarioDefinitions"]:
         convertedSteps = ""
         convertedExamples = ""
@@ -34,10 +30,6 @@ def convert_and_send(gherkin_filename):
         if(test.get("examples") is not None):
             convertedExamples = convert_gherkin_examples_to_xml(test["examples"])
             convertedParams = convert_gherkin_parameters(test["examples"])
-
-        print(convertedSteps)
-        print(convertedExamples)
-        print(convertedParams)
 
         json_list = []
         json_steps = {
@@ -70,9 +62,9 @@ def convert_and_send(gherkin_filename):
 
             # Check if the request was successful
             if response.status_code == 200:
-                print("Test case created successfully.")
+                print(f"Test case {wi} created successfully.")
             else:
-                print("Failed to create test case. Error:", response.text)
+                print(f"Failed to create test case {wi}. Error:", response.text)
 
 #test["tags"]
 def get_test_case_by_tags(tags):
@@ -146,7 +138,7 @@ def convert_step_to_xml(steps):
     for idx, step in enumerate(steps, start=2):
         stepText = re.sub(pattern, r'@\1', step["text"])
         xml_step = f'<step id="{idx}" type="ActionStep">\n'
-        xml_step += f'    <parameterizedString isformatted="true">&lt;DIV&gt;&lt;P&gt;{step["keyword"]} {stepText}&lt;/P&gt;&lt;/DIV&gt;</parameterizedString>\n'
+        xml_step += f'    <parameterizedString isformatted="true">&lt;DIV&gt;&lt;P&gt;&lt;B&gt;{step["keyword"]}&lt;/B&gt; {stepText}&lt;/P&gt;&lt;/DIV&gt;</parameterizedString>\n'
         xml_step += '    <parameterizedString isformatted="true">&lt;DIV&gt;&lt;P&gt;&lt;BR/&gt;&lt;/P&gt;&lt;/DIV&gt;</parameterizedString>\n'
         xml_step += '    <description/>\n'
         xml_step += '</step>'
@@ -157,13 +149,3 @@ def convert_step_to_xml(steps):
     xml += '\n</steps>'
 
     return xml
-
-def main():
-    # cmdlineparser = argparse.ArgumentParser()
-    # cmdlineparser.add_argument("feature")
-    # cmdline_args = cmdlineparser.parse_args()
-    convert_and_send("test.feature")
-
-
-if __name__ == '__main__':
-    main()
