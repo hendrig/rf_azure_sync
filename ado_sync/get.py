@@ -17,7 +17,9 @@ import os
 from html import unescape	
 from collections import namedtuple	
 import base64	
-import requests	
+import requests
+from bs4 import BeautifulSoup
+import xml.etree.ElementTree as ET
 
 def load_sync_config(file_path="ado_config.json"):	
     """	
@@ -33,118 +35,23 @@ def load_sync_config(file_path="ado_config.json"):
         sync_config = json.load(config_file)	
     return sync_config	
 
-def create_robot_content(fields, pref_config):	
-    """	
-    Create Robot Framework content based on Azure DevOps work item fields.	
-    Args:	
-        fields (dict): Azure DevOps work item fields.	
-        pref_config (dict): Prefix configuration for tags.	
-    Returns:	
-        str: Robot Framework content.	
-    """	
-    WorkItemDetails = namedtuple(	
-        "WorkItemDetails",	
-        ["id", "title", "iteration_path", "priority", "automation_status", "sprint"],	
-    )	
-
-    def get_tags_line(work_item_details):	
-        tags_line = (	
-            f"    [tags]  {prefix_test_case} {work_item_details.id}    "	
-            f"{prefix_automation_status} {work_item_details.automation_status}    "	
-            f"{prefix_priority} {work_item_details.priority}    "	
-            f"{prefix_iteration_path} {work_item_details.sprint}"	
-        )	
-
-        tags_line += get_tags(fields)	
-        tags_line += get_relations_tags(fields)	
-        tags_line += "\n"	
-
-        return tags_line	
-
-    def get_steps_and_expected_results(steps_raw):	
-        steps_and_expected_results = re.findall(	
-            r'<step id="\d+" type=".*?">'	
-            r'<parameterizedString isformatted="true">(.*?)</parameterizedString>'	
-            r'<parameterizedString isformatted="true">(.*?)</parameterizedString>'	
-            r"<description/></step>",	
-            steps_raw,	
-            re.DOTALL,	
-        )	
-
-        return steps_and_expected_results	
-
-    def get_tags(fields):	
-        tags_line = ""	
-        if "System.Tags" in fields and fields["System.Tags"] is not None:	
-            tags_list = [tag.strip() for tag in prefix_system_tags.split(";")]	
-            tags_line += "    " + "    ".join(	
-                f"{prefix_system_tags} {tag}" for tag in tags_list	
-            )	
-        return tags_line	
-
-    def get_relations_tags(fields):	
-        tags_line = ""	
-        if "relations" in fields:	
-            relations = fields["relations"]	
-            for relation in relations:	
-                if "url" in relation and "_apis/wit/workItems/" in relation["url"]:	
-                    us_id = re.search(	
-                        r"_apis/wit/workItems/(\d+)", relation["url"]	
-                    ).group(1)	
-                    tags_line += f"    {prefix_user_story} {us_id}"	
-        return tags_line	
-
-    work_item_details = WorkItemDetails(	
-        id=fields.get("System.Id", ""),	
-        title=fields.get("System.Title", ""),	
-        iteration_path=fields.get("System.IterationPath", ""),	
-        priority=fields.get("Microsoft.VSTS.Common.Priority", ""),	
-        automation_status=fields.get("Custom.AutomationStatus", ""),	
-        sprint=fields.get("Sprint", "").replace(" ", "_"),	
-    )	
-
-    tags_line = get_tags_line(work_item_details)	
-
-    rf_content = f"\n {pref_config['title']}: {work_item_details.title}\n"	
-    rf_content += tags_line	
-
-    steps_raw = fields.get("Microsoft.VSTS.TCM.Steps", "")	
-    steps_and_expected_results = get_steps_and_expected_results(steps_raw)	
-
-    for _, (step, _) in enumerate(steps_and_expected_results, start=1):	
-        step = unescape(re.sub("<[^<]+?>", "", step.strip()))	
-        step = step.replace("<P>", "").replace("</P>", "")	
-        step = step.replace("<DIV>", "").replace("</DIV>", "")	
-        step = step.replace("<BR>", "").replace("<BR/>", "")	
-
-        if step:	
-            rf_content += f"    {step}\n"	
-    rf_content += "\n"	
-
-    return rf_content	
-
 def get_steps_and_expected_results(steps_raw):
-    rf_content = ""
-    steps_and_expected_results = re.findall(	
-        r'<step id="\d+" type=".*?">'	
-        r'<parameterizedString isformatted="true">(.*?)</parameterizedString>'	
-        r'<parameterizedString isformatted="true">(.*?)</parameterizedString>'	
-        r"<description/></step>",	
-        steps_raw,	
-        re.DOTALL,	
-    )
+    soup = BeautifulSoup(steps_raw, 'html.parser')
+    xml_removed = soup.get_text(separator=' ')
+    soup = BeautifulSoup(xml_removed, 'html.parser')
+    plain_text = soup.get_text(separator=' ')
 
-    for _, (step, _) in enumerate(steps_and_expected_results, start=1):	
-        step = unescape(re.sub("<[^<]+?>", "", step.strip()))	
-        step = step.replace("<P>", "").replace("</P>", "")	
-        step = step.replace("<DIV>", "").replace("</DIV>", "")	
-        step = step.replace("<BR>", "").replace("<BR/>", "")	
+    plain_text_with_escape = plain_text.replace("     ", "\n")
+    # Define the regular expression pattern to match any word following '@'
+    pattern = r'@(\w+)'
 
-        if step:	
-            rf_content += f"    {step}\n"	
-    rf_content += "\n"	
+    # Define the replacement pattern using a backreference (\1) to include the matched word
+    replacement = r'<\1>'
 
-    return rf_content
+    # Use re.sub() to perform the replacement
+    plain_text_with_escape_and_tags = re.sub(pattern, replacement, plain_text_with_escape)
+
+    return plain_text_with_escape_and_tags
 
 def get_test_case(test_case_id):	
     url_workitems = (	
@@ -159,12 +66,37 @@ def get_test_case(test_case_id):
 
         test_case_title = work_item['System.Title']
         raw_steps = work_item["Microsoft.VSTS.TCM.Steps"]
+        raw_params = ""
+        
+        if work_item.get("Microsoft.VSTS.TCM.Parameters") is not None:
+            raw_params = work_item["Microsoft.VSTS.TCM.Parameters"]
+            root = ET.fromstring(raw_params)
+
+            # Find the 'param' element and get its 'name' attribute
+            param_names = [param.attrib['name'] for param in root.findall('param')]
+
+        raw_examples = ""
+        my_params_dict = {}
+        if work_item.get("Microsoft.VSTS.TCM.LocalDataSource") is not None:
+            raw_examples = work_item["Microsoft.VSTS.TCM.LocalDataSource"]
+            root = ET.fromstring(raw_examples)
+            for param in param_names:
+                status_texts = [status.text for status in root.findall(f".//{param}")]
+                my_params_dict[f"{param}"] = status_texts
+
         steps = get_steps_and_expected_results(raw_steps)
 
         result = f"@tc:{test_case_id} \n"
-        result += f"Cenário: {test_case_title} \n"
-        result += f"{steps} \n"
-        #result += '\n'.join(steps)
+        if len(my_params_dict)> 0:
+            transposed = transpose_dict(my_params_dict)
+            formated = format_transposed_dict(transposed, param_names)
+            result += f"Esquema do Cenário: {test_case_title} \n"
+            result += f"{steps} \n"
+            result += "Exemplos \n:"
+            result += f"{formated} \n"
+        else:
+            result += f"Cenário: {test_case_title} \n"
+            result += f"{steps} \n"
 
         return result
     else:	
@@ -200,7 +132,28 @@ def get_test_case(test_case_id):
 
     # print(f"Robot Framework file '{file_name}' updated successfully.")	
 
-def get_azure_test_cases():	
+def transpose_dict(dict_to_transpose):
+    # Transpose the dictionary
+    transposed_dict = {}
+    for key, values in dict_to_transpose.items():
+        for index, value in enumerate(values):
+            transposed_dict.setdefault(index, {})[key] = value
+    return transposed_dict
+
+def format_transposed_dict(transposed_dict, params):
+    headers = '|'
+    for header in params:
+        headers += f" {header} |"
+
+    rows = ""
+    for key, line in transposed_dict.items():
+        rowN = '|'
+        for param in params:
+            rowN += f" {line.get(param)} |" if line.get(param) is not None else " |"
+        rows += rowN + "\n"
+    return headers + "\n" + rows
+
+def get_azure_test_cases():
     """	
     Retrieve Azure test cases based on the given a Test Suite.	
     Args:	
@@ -243,7 +196,6 @@ def get_azure_test_cases():
                 formated_test_cases = []
 
                 if test_cases["count"] > 0:
-
                     for test_case in test_cases["value"]:	
                         print("WI: ", test_case["workItem"]["id"])	
                         print("TestCase: ", test_case["workItem"]["name"])	
@@ -258,7 +210,6 @@ def get_azure_test_cases():
                 file_content += f"Funcionalidade: {suite_name} \n"
                 for tc in formated_test_cases:
                     file_content += f"{tc} \n"
-                # file_content += '\n'.join(formated_test_cases)
 
                 file_name = os.path.join(robot_folder_path, f"{suite_id}.feature")
                 existing_content:str = ""

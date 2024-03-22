@@ -8,7 +8,8 @@
         "esbenp.prettier-vscode",
         "envolti.gherkinptbrenvolti",
         "harryhopkinson.vim-theme",
-        "pkief.material-icon-theme"
+        "pkief.material-icon-theme",
+        "alancole.gherkintablealign"
       ],
       "settings": {
         "python.pythonPath": "/usr/local/bin/python3.11",
