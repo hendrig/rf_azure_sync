@@ -55,13 +55,23 @@ def get_steps_and_expected_results(steps_raw):
 
 def get_test_case(test_case_id):	
     url_workitems = (	
-        f"{url}wit/workitems/{test_case_id}?api-version=7.1-preview.3"	
+        f"{url}wit/workitems/{test_case_id}?$expand=relations&api-version=7.1-preview.3"	
     )
 
     response_workitems = requests.get(url_workitems, headers=headers, timeout=10)
     if response_workitems.status_code == 200:	
         data_workitems = response_workitems.json()	
-        work_item = data_workitems["fields"]	
+        work_item = data_workitems["fields"]
+        wi_relations = []
+
+        if data_workitems.get("relations") is not None:
+            relations = data_workitems["relations"]
+            for relation in relations:
+                match = re.search(r'/(\d+)$', relation["url"])
+                if match:
+                    wi_relation = match.group(1)
+                    wi_relations.append(wi_relation)
+        
         print(f"ID: {test_case_id}, Title: {work_item['System.Title']}")
 
         test_case_title = work_item['System.Title']
@@ -86,13 +96,17 @@ def get_test_case(test_case_id):
 
         steps = get_steps_and_expected_results(raw_steps)
 
-        result = f"@tc:{test_case_id} \n"
+        result = f"@tc:{test_case_id}\n"
+
+        for r in wi_relations:
+            result += f"@wi:{r}\n"
+
         if len(my_params_dict)> 0:
             transposed = transpose_dict(my_params_dict)
             formated = format_transposed_dict(transposed, param_names)
             result += f"Esquema do Cenário: {test_case_title} \n"
             result += f"{steps} \n"
-            result += "Exemplos \n:"
+            result += "\nExemplos: \n"
             result += f"{formated} \n"
         else:
             result += f"Cenário: {test_case_title} \n"
@@ -105,33 +119,6 @@ def get_test_case(test_case_id):
             f"{response_workitems.status_code} - {response_workitems.text}"	
         )
 
-    # robot_content: str = ""	
-    # for response_json in response_json_list:	
-    #     work_item = response_json["value"][0]["fields"]	
-    #    robot_content += create_robot_content(work_item, prefix_config)	
-
-    # file_name = os.path.join(robot_folder_path, "todo_organize.robot")	
-
-    # existing_content:str = ""	
-
-    # if os.path.exists(file_name):	
-    #     with open(file_name, "r", encoding="utf-8") as existing_file:	
-    #         existing_content = existing_file.read()	
-
-    # if not existing_content or (	
-    #     settings_section not in existing_content	
-    #     and test_cases_section not in existing_content	
-    # ):	
-    #     existing_content += settings_section + test_cases_section	
-
-    # if robot_content:	
-    #     existing_content += robot_content	
-
-    # with open(file_name, "w", encoding="utf-8") as file:	
-    #     file.write(existing_content)	
-
-    # print(f"Robot Framework file '{file_name}' updated successfully.")	
-
 def transpose_dict(dict_to_transpose):
     # Transpose the dictionary
     transposed_dict = {}
@@ -141,13 +128,13 @@ def transpose_dict(dict_to_transpose):
     return transposed_dict
 
 def format_transposed_dict(transposed_dict, params):
-    headers = '|'
+    headers = '   |'
     for header in params:
         headers += f" {header} |"
 
     rows = ""
     for key, line in transposed_dict.items():
-        rowN = '|'
+        rowN = '   |'
         for param in params:
             rowN += f" {line.get(param)} |" if line.get(param) is not None else " |"
         rows += rowN + "\n"
@@ -163,42 +150,37 @@ def get_azure_test_cases():
         set: A set of Azure test case IDs.	
     """	
 
-    print(f"Starting to sync {url}")	
-    print(f"Headers {headers}")	
-    # print(f"Headers {config_data}")	
+    print(f"Starting to sync {url}")
 
     main_test_plan_id = config_data["constants"]["TestPlanId"]	
     test_suites = f"{url}testplan/Plans/{main_test_plan_id}/suites"	
 
-    print(f"Consulting {test_suites}")	
+    print(f"Consulting {test_suites}")
 
     response_wiql = requests.get(	
         test_suites, headers=headers, timeout=10	
-    )	
-
-    print(f"Status Code {response_wiql.status_code}")	
+    )
 
     if response_wiql.status_code == 200:	
         data = response_wiql.json()	
 
-        for item in data["value"]:	
-            print("Suite Id: ", item["id"])	
-            print("Name", item["name"])	
+        for item in data["value"]:
+            print(f"Syncing {item['id']} {item['name']}")
             suite_id = item["id"]
             suite_name = item["name"]
             create_file = False
             file_content = ''
 
             response_test_cases = requests.get(item["_links"]["testCases"]["href"], headers=headers, timeout=10)	
-            print(f"Status Code {response_test_cases.status_code}")	
             if response_test_cases.status_code == 200:	
                 test_cases = response_test_cases.json()
                 formated_test_cases = []
 
                 if test_cases["count"] > 0:
-                    for test_case in test_cases["value"]:	
-                        print("WI: ", test_case["workItem"]["id"])	
-                        print("TestCase: ", test_case["workItem"]["name"])	
+                    for test_case in test_cases["value"]:
+                        wi = test_case["workItem"]["id"]
+                        name = test_case["workItem"]["name"]
+                        print(f"Syncing {wi} {name}")
                         formated_test_case = get_test_case(test_case["workItem"]["id"])
                         formated_test_cases.append(formated_test_case)
                     create_file = True
@@ -208,6 +190,7 @@ def get_azure_test_cases():
                 file_content = f"#language:pt \n"
                 file_content += f"@suiteId:{suite_id} \n"
                 file_content += f"Funcionalidade: {suite_name} \n"
+                file_content += "\n\n"
                 for tc in formated_test_cases:
                     file_content += f"{tc} \n"
 
