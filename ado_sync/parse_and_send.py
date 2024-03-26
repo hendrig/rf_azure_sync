@@ -1,23 +1,11 @@
-import base64
 import re
 from gherkin3.parser import Parser
 import requests
 
-def convert_and_send(filepath):
-    organization = ''
-    project = ''
-    token = ''
-    suite_id = ''
-
-    credentials = base64.b64encode(f"Basic:{token}".encode('utf-8')).decode('utf-8')
-
-    headers = {
-        'Authorization': f'Basic {credentials}',
-        'Content-Type': 'application/json-patch+json'
-    }
-
+def convert_and_send(filepath, headers, organization, project_name):
     with open(filepath, 'r') as f:
         content = f.read()
+
     parser = Parser()
     feature = parser.parse(content)
 
@@ -25,13 +13,23 @@ def convert_and_send(filepath):
         convertedSteps = ""
         convertedExamples = ""
         convertedParams = ""
+        test_name = test["name"]
+
         if(len(test["steps"]) > 0):
             convertedSteps = convert_step_to_xml(test["steps"])
+
         if(test.get("examples") is not None):
             convertedExamples = convert_gherkin_examples_to_xml(test["examples"])
             convertedParams = convert_gherkin_parameters(test["examples"])
 
         json_list = []
+
+        json_title = {
+            "op": "replace",
+            "path": "/fields/System.Title",
+            "value": test_name
+        }
+        json_list.append(json_title)
         json_steps = {
             "op": "replace",
             "path": "/fields/Microsoft.VSTS.TCM.Steps",
@@ -55,6 +53,10 @@ def convert_and_send(filepath):
             }
             json_list.append(json_params)
 
+        json_links = build_linked_items(get_links_by_tags(test["tags"]), organization, project_name)
+        if len(json_links) > 0:
+            for json_link in json_links:
+                json_list.append(json_link)
 
         for wi in get_test_case_by_tags(test["tags"]):
             url = f"https://dev.azure.com/{organization}/_apis/wit/workItems/{wi}?api-version=7.1-preview.3"
@@ -62,11 +64,42 @@ def convert_and_send(filepath):
 
             # Check if the request was successful
             if response.status_code == 200:
-                print(f"Test case {wi} created successfully.")
+                print(f"Test case {wi} ({test_name}) synced successfully.")
             else:
                 print(f"Failed to create test case {wi}. Error:", response.text)
 
-#test["tags"]
+def build_linked_items(linked_work_items, organization_name, project_name):
+    """
+    Builds the linked items for updating Azure Test Cases.
+
+    Args:
+        linked_work_items (list): List of linked work items.
+        organization_name (str): Azure DevOps organization name.
+        project_name (str): Azure DevOps project name.
+
+    Returns:
+        list: List of linked items for Azure Test Cases.
+    """
+    linked_items = []
+
+    for linked_item in linked_work_items:
+        linked_items.append(
+            {
+                "op": "add",
+                "path": "/relations/-",
+                "value": {
+                    "rel": "Microsoft.VSTS.Common.TestedBy-Reverse",
+                    "url": (
+                        f"https://dev.azure.com/{organization_name}/"
+                        f"{project_name}/_apis/wit/workitems/{linked_item}"
+                    ),
+                    "attributes": {"comment": "Associated test case with work item"},
+                },
+            }
+        )
+
+    return linked_items
+
 def get_test_case_by_tags(tags):
     extracted_values = []
 
@@ -77,6 +110,23 @@ def get_test_case_by_tags(tags):
         if x.startswith('@tc:'):
             # Extract the value after "@tc:"
             extracted_value = x.split('@tc:')[1]
+            extracted_values.append(extracted_value)
+    
+    return extracted_values
+
+def get_links_by_tags(tags):
+    extracted_values = []
+
+    # Iterate over the values of the dictionary
+    for value in tags:
+        x = value["name"]
+        # Check if the value starts with "@tc:"
+        if x.startswith('@story:'):
+            # Extract the value after "@tc:"
+            extracted_value = x.split('@story:')[1]
+            extracted_values.append(extracted_value)
+        elif x.startswith("@bug:"):
+            extracted_value = x.split('@bug:')[1]
             extracted_values.append(extracted_value)
     
     return extracted_values

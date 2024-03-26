@@ -26,11 +26,11 @@ def load_sync_config(file_path="ado_config.json"):
     Load synchronization configuration from a JSON file.	
     Args:	
         file_path (str, optional): The path to the synchronization configuration JSON file.	
-            Defaults to "sync_config.json".	
+            Defaults to "ado_config.json".	
     Returns:	
         dict: A dictionary containing synchronization configuration.	
     """	
-    print("Starting")	
+    print("Loading Configurations")	
     with open(file_path, "r", encoding="utf-8") as config_file:	
         sync_config = json.load(config_file)	
     return sync_config	
@@ -71,8 +71,6 @@ def get_test_case(test_case_id):
                 if match:
                     wi_relation = match.group(1)
                     wi_relations.append(wi_relation)
-        
-        print(f"ID: {test_case_id}, Title: {work_item['System.Title']}")
 
         test_case_title = work_item['System.Title']
         raw_steps = work_item["Microsoft.VSTS.TCM.Steps"]
@@ -141,21 +139,10 @@ def format_transposed_dict(transposed_dict, params):
     return headers + "\n" + rows
 
 def get_azure_test_cases():
-    """	
-    Retrieve Azure test cases based on the given a Test Suite.	
-    Args:	
-        base_url (str): The base URL for Azure DevOps REST API.	
-        headers_wiql (dict): Headers for the Wiql request.	
-    Returns:	
-        set: A set of Azure test case IDs.	
-    """	
-
-    print(f"Starting to sync {url}")
-
     main_test_plan_id = config_data["constants"]["TestPlanId"]	
     test_suites = f"{url}testplan/Plans/{main_test_plan_id}/suites"	
 
-    print(f"Consulting {test_suites}")
+    print(f"Consulting {test_suites}\n")
 
     response_wiql = requests.get(	
         test_suites, headers=headers, timeout=10	
@@ -165,9 +152,10 @@ def get_azure_test_cases():
         data = response_wiql.json()	
 
         for item in data["value"]:
-            print(f"Syncing {item['id']} {item['name']}")
             suite_id = item["id"]
             suite_name = item["name"]
+            print(f"Syncing test suite {suite_id} - {suite_name}")
+
             create_file = False
             file_content = ''
 
@@ -180,7 +168,7 @@ def get_azure_test_cases():
                     for test_case in test_cases["value"]:
                         wi = test_case["workItem"]["id"]
                         name = test_case["workItem"]["name"]
-                        print(f"Syncing {wi} {name}")
+                        print(f"Syncing {wi} - {name}")
                         formated_test_case = get_test_case(test_case["workItem"]["id"])
                         formated_test_cases.append(formated_test_case)
                     create_file = True
@@ -194,7 +182,7 @@ def get_azure_test_cases():
                 for tc in formated_test_cases:
                     file_content += f"{tc} \n"
 
-                file_name = os.path.join(robot_folder_path, f"{suite_id}.feature")
+                file_name = os.path.join(folder_path, f"{suite_id}.feature")
                 existing_content:str = ""
 
                 if os.path.exists(file_name):	
@@ -213,35 +201,21 @@ def get_azure_test_cases():
                 with open(file_name, "w", encoding="utf-8") as file:	
                     file.write(file_content)	
 
-                print(f"Feature file '{file_name}' updated successfully.")	
+                print(f"Feature file '{file_name}' updated successfully.\n")
+            else:
+                print(" No test cases found \n")
 
-            print("\n")	
-        #print(data)	
-
-    # # Return an empty set if the request was not successful	
-    # return set()	
-
-config_data = load_sync_config()	
-robot_folder_path = config_data["path"]	
-constants = config_data["constants"]	
-credentials = config_data["credentials"]	
-prefix_config = config_data["tag_config"]	
-settings_section = constants["settings_section"]	
-test_cases_section = constants["test_cases_section"]	
+config_data = load_sync_config()
+folder_path = config_data["paths"]["tests"]
+credentials = config_data["credentials"]
 personal_access_token = credentials["personal_access_token"]	
 organization = credentials["organization_name"]	
-project = credentials["project_name"]	
-prefix_user_story = prefix_config["user_story"]	
-prefix_system_tags = prefix_config["System.Tags"]	
-prefix_priority = prefix_config["Priority"]	
-prefix_test_case = prefix_config["test_case"]	
+project = credentials["project_name"]
 url = f"https://dev.azure.com/{organization}/{project}/_apis/"	
-headers = {	
-    "Authorization": "Basic "	
+headers = {
+    "Authorization": "Basic "
     + base64.b64encode(f"{personal_access_token}:".encode()).decode(),	
-}	
-prefix_automation_status = prefix_config["AutomationStatus"]	
-prefix_iteration_path = prefix_config["IterationPath"]	
+}
 
 if __name__ == "__main__":	
     get_azure_test_cases()

@@ -9,7 +9,8 @@
         "envolti.gherkinptbrenvolti",
         "harryhopkinson.vim-theme",
         "pkief.material-icon-theme",
-        "alancole.gherkintablealign"
+        "alancole.gherkintablealign",
+        "EnvolTi.gherkinptbrenvolti"
       ],
       "settings": {
         "python.pythonPath": "/usr/local/bin/python3.11",
@@ -21,7 +22,6 @@
         "editor.renderWhitespace": "all",
         "editor.minimap.enabled": false,
         "workbench.iconTheme": "material-icon-theme",
-        "vscode-pets.throwBallWithMouse": true,
         "terminal.integrated.env.windows": {},
         "workbench.colorTheme": "Vim Dark Hard",
         "terminal.integrated.defaultProfile.windows": "Git Bash",

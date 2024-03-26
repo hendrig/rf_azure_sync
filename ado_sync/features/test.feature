@@ -1,30 +1,23 @@
 # language:pt
 @suiteId:59
-Funcionalidade: Anomalia de Agendamento Sem Checkin
+Funcionalidade: Teste de uma feature
 
 @tc:68
 @story:50
 @ignore
 Cenário: Derrubar no chão
-    Dado que o gato pulou na estante
-    Quando o gato encontrou um objeto
-    Então p gato derruba o objeto no chão
-
-@tc:61
-@story:50
-Cenário: Cenário 2
-    Dado que o gato pulou na estante 1  
-    Quando o gato encontrou um  asfasd
-    Então p gato derruba o objeto no chão 3
+Dado que o gato pulou na estante
+Quando o gato encontrou um objeto
+Então p gato derruba o objeto no chão
 
 @tc:60
-Esquema do Cenário: [Negócio] - Criação de agendamento com sucesso
-    Dado que esteja autenticado como <perfil>
-    E navegar até opção de agendamento de carga <teste>
-    Quando preencher todos os campos obrigatórios para criação de agendamento
-    Então um novo agendamento de carga deverá ser criado com sucesso
+Esquema do Cenário: [Another Scenario] Isso é um teste
+Dado que isso seja um teste do tipo <perfil>
+E eu tenha um parametro de teste <teste>
+Quando preencher todos os campos obrigatórios para executar o teste
+Então o teste deverá ter passado
 
-    Exemplos:
-    | perfil        |teste|
-    | ADM           |a|
-    | Supervisor TP |v|
+Exemplos:
+| perfil | teste         |
+| ADM    | administrador |
+| Outro  | outro         |
